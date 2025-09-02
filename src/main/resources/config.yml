@@ -1,0 +1,9 @@
+# Server ID, you can generate a new one if you want to reset the link between your Minecraft server and the discord bot.
+server-id: UUID
+
+# Websocket URL, Dont change if you dont know what you are doing!
+websocket-url: "ws://james.vacso.cloud:10000"
+room-id: UUID
+
+# API Endpoint URL, Dont change if you dont know what you are doing!
+api-url: "https://api.james.vacso.cloud"

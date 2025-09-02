@@ -1,0 +1,9 @@
+name: ChatBridge
+main: com.example.chatbridge.ChatBridge
+version: 0.0.1
+api-version: 1.21
+commands:
+  chatbridge:
+    description: Main command for ChatBridge plugin
+    usage: /<command> reconnect
+    aliases: [cb]
