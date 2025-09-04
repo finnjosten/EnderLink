@@ -1,12 +1,15 @@
-package com.example.chatbridge;
+package com.example.enderlink;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.json.JSONObject;
 
@@ -21,7 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
-public class ChatBridge extends JavaPlugin implements Listener {
+public class EnderLink extends JavaPlugin implements Listener {
     private WebSocket ws;
     private String serverId;
     private String websocketUrl;
@@ -29,12 +32,18 @@ public class ChatBridge extends JavaPlugin implements Listener {
     private String roomId;
     private boolean registered = false;
     private boolean wsConnected = false;
+    private long lastPingTime = 0;
     private long lastPongTime = 0;
+    private FileConfiguration messagesConfig;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        saveDefaultMessagesConfig();
         reloadConfig();
+
+        // Load in messages.yml
+        messagesConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
 
         FileConfiguration config = getConfig();
         websocketUrl = config.getString("websocket-url", "ws://james.vacso.cloud:10000");
@@ -57,8 +66,6 @@ public class ChatBridge extends JavaPlugin implements Listener {
             getLogger().info("Using existing server UUID: " + serverId);
             return;
         }
-
-        final String initialId = serverId;
 
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             HttpClient client = HttpClient.newBuilder()
@@ -117,7 +124,10 @@ public class ChatBridge extends JavaPlugin implements Listener {
             Bukkit.getScheduler().runTask(this, () -> {
                 if (this.registered) {
                     getConfig().set("server-id", serverId);
-                    getConfig().set("room-id", serverId);
+                    if (roomId == null || roomId.isEmpty() || roomId.equals("UUID")) {
+                        roomId = serverId;
+                    }
+                    getConfig().set("room-id", roomId);
                     try {
                         getConfig().save(new File(getDataFolder(), "config.yml"));
                     } catch (IOException e) {
@@ -141,29 +151,37 @@ public class ChatBridge extends JavaPlugin implements Listener {
 
                         // Send register message
                         ws.sendText("{\"type\":\"register\",\"roomId\":\"" + roomId + "\"}", true);
+                        lastPingTime = System.currentTimeMillis();
+                        wsConnected = true;
 
                         // Ping every minute
-                        Bukkit.getScheduler().runTaskTimerAsynchronously(ChatBridge.this, () -> {
+                        Bukkit.getScheduler().runTaskTimerAsynchronously(EnderLink.this, () -> {
                             if (ws != null) ws.sendText("{\"type\":\"ping\"}", true);
 
                             // Check pong timeout
-                            long now = System.currentTimeMillis();
-                            if (lastPongTime == 0 || now - lastPongTime > 10000) {
-                                wsConnected = false;
+                            lastPingTime = System.currentTimeMillis();
 
-                                // Alert OPs every 10s
-                                Bukkit.getScheduler().runTask(ChatBridge.this, () ->
-                                        Bukkit.getOnlinePlayers().stream()
-                                                .filter(p -> p.isOp())
-                                                .forEach(p -> p.sendMessage("§c[ChatBridge] WebSocket disconnected! Run /chatbridge reconnect"))
+                            // Reconnect if no pong in 2 minutes
+                            if (lastPongTime > 0 && (System.currentTimeMillis() - lastPongTime) > 120000) {
+                                wsConnected = false;
+                                getLogger().warning("WebSocket pong timeout, attempting to reconnect...");
+                                try {
+                                    if (ws != null) ws.sendClose(WebSocket.NORMAL_CLOSURE, "Pong timeout");
+                                } catch (Exception ignored) {}
+                                connectWebSocket();
+
+                                Bukkit.getScheduler().runTask(EnderLink.this, () ->
+                                    Bukkit.getOnlinePlayers().stream()
+                                            .filter(p -> p.isOp())
+                                            .forEach(p -> p.sendMessage(messagesConfig.getString("error-op-disconnect")))
                                 );
                             }
                         }, 0L, 1200L);
 
                         // Global alert every 5 minutes
-                        Bukkit.getScheduler().runTaskTimer(ChatBridge.this, () -> {
+                        Bukkit.getScheduler().runTaskTimer(EnderLink.this, () -> {
                             if (!wsConnected) {
-                                Bukkit.broadcastMessage("§c[ChatBridge] WebSocket is disconnected! Please report this to an admin.");
+                                Bukkit.broadcastMessage(messagesConfig.getString("error-disconnect"));
                             }
                         }, 0L, 6000L);
 
@@ -174,26 +192,20 @@ public class ChatBridge extends JavaPlugin implements Listener {
                     public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
                         String msg = data.toString();
 
-                        Bukkit.getScheduler().runTask(ChatBridge.this, () -> {
+                        Bukkit.getScheduler().runTask(EnderLink.this, () -> {
                             try {
                                 JSONObject json = new JSONObject(msg);
                                 String type = json.optString("type", "");
+                                lastPongTime = System.currentTimeMillis();
+                                wsConnected = true;
 
                                 if ("registered".equalsIgnoreCase(type)) {
-                                    registeredWs = true;
-                                    wsConnected = true;
-                                    lastPongTime = System.currentTimeMillis();
                                     getLogger().info("WebSocket registration successful for server: " + serverId);
                                 } else if ("pong".equalsIgnoreCase(type)) {
-                                    wsConnected = true;
-                                    lastPongTime = System.currentTimeMillis();
                                 } else if ("chat".equalsIgnoreCase(type) || "message".equalsIgnoreCase(type)) {
-                                    String sender = json.optString("sender", "");
-                                    if ("discord".equalsIgnoreCase(sender)) {
-                                        String player = json.optString("player", "Unknown");
-                                        String message = json.optString("message", "");
-                                        Bukkit.broadcastMessage("§9[Discord] §f" + player + " > " + message);
-                                    }
+                                    sendChat(json);
+                                } else if ("chat_reply".equalsIgnoreCase(type) || "message".equalsIgnoreCase(type)) {
+                                    sendChatReply(json);
                                 }
                             } catch (Exception e) {
                                 getLogger().severe("Failed to process WebSocket message: " + e.getMessage());
@@ -219,18 +231,47 @@ public class ChatBridge extends JavaPlugin implements Listener {
         if (ws != null) ws.sendClose(WebSocket.NORMAL_CLOSURE, "Shutting down");
     }
 
+
+
+
+
+
+    // EVENT HANDLING
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
         if (ws != null) {
-            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"chat\", \"sender\": \"minecraft\", \"player\": \"" +
-                    event.getPlayer().getName() + "\", \"message\": \"" + event.getMessage() + "\" }";
+            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"chat\", \"sender\": \"minecraft\", \"player\": \"" + event.getPlayer().getName() + "\", \"message\": \"" + event.getMessage() + "\" }";
             ws.sendText(json, true);
         }
     }
 
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        getLogger().info("Join fired for " + event.getPlayer().getName());
+        if (ws != null) {
+            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_join\", \"player\": \"" + event.getPlayer().getName() + "\" }";
+            ws.sendText(json, true);
+        }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        getLogger().info("Quit fired for " + event.getPlayer().getName());
+        if (ws != null) {
+            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_quit\", \"player\": \"" + event.getPlayer().getName() + "\" }";
+            ws.sendText(json, true);
+        }
+    }
+
+
+
+
+
+
+    // COMMAND HANDLING
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("chatbridge")) {
+        if (command.getName().equalsIgnoreCase("enderlink")) {
             if (args.length > 0 && args[0].equalsIgnoreCase("reconnect")) {
                 if (ws != null) {
                     try {
@@ -238,10 +279,71 @@ public class ChatBridge extends JavaPlugin implements Listener {
                     } catch (Exception ignored) {}
                 }
                 connectWebSocket();
-                sender.sendMessage("§a[ChatBridge] Attempting to reconnect to WebSocket...");
+                sender.sendMessage("§a[EnderLink] Attempting to reconnect to WebSocket...");
+                return true;
+            } else if (args.length > 0 && args[0].equalsIgnoreCase("id")) {
+                sender.sendMessage(messagesConfig.getString("settings-server-id").replace("{server_id}", serverId));
+                sender.sendMessage(messagesConfig.getString("settings-room-id").replace("{room_id}", roomId));
+                return true;
+            } else if (args.length > 0 && args[0].equalsIgnoreCase("status")) {
+                sender.sendMessage(messagesConfig.getString("settings-status").replace("{status}", (wsConnected ? "§aConnected" : "§cDisconnected")));
+                return true;
+            } else if (args.length == 0) {
+                sender.sendMessage(messagesConfig.getString("settings-server-id").replace("{server_id}", serverId));
+                sender.sendMessage(messagesConfig.getString("settings-room-id").replace("{room_id}", roomId));
+                sender.sendMessage(messagesConfig.getString("settings-status").replace("{status}", (wsConnected ? "§aConnected" : "§cDisconnected")));
+                sender.sendMessage(messagesConfig.getString("settings-reconnect"));
                 return true;
             }
         }
         return false;
+    }
+
+
+
+
+
+    
+    // CONFIG HANDLING
+    public void saveDefaultMessagesConfig() {
+        if (!new File(getDataFolder(), "messages.yml").exists()) {
+            this.saveResource("messages.yml", false);
+        }
+    }
+
+
+
+
+
+
+    // CHAT HANDLING
+    private void sendChat(JSONObject json) {
+        String sender = json.optString("sender", "");
+        if (!"minecraft".equalsIgnoreCase(sender)) {
+            String player = json.optString("player", "Unknown");
+            String message = json.optString("message", "");
+            
+            message = messagesConfig.getString("mc-chat", "[{sender}] {player} > {message}")
+                .replace("{sender}", sender)
+                .replace("{player}", player)
+                .replace("{message}", message);
+            Bukkit.broadcastMessage(message);   
+        }
+    }
+
+    private void sendChatReply(JSONObject json) {
+        String sender = json.optString("sender", "");
+        if (!"minecraft".equalsIgnoreCase(sender)) {
+            String player = json.optString("player", "Unknown");
+            String original = json.optString("original", "");
+            String message = json.optString("message", "");
+            
+            message = messagesConfig.getString("mc-reply", "[{sender}] {player} > {message} (in reply to {reply_to})")
+                .replace("{sender}", sender)
+                .replace("{player}", player)
+                .replace("{message}", message)
+                .replace("{reply_to}", original);
+            Bukkit.broadcastMessage(message);
+        }
     }
 }

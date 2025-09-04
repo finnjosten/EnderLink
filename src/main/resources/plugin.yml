@@ -1,9 +1,9 @@
-name: ChatBridge
-main: com.example.chatbridge.ChatBridge
-version: 0.0.1
+name: EnderLink
+main: com.example.enderlink.EnderLink
+version: 0.1.1
 api-version: 1.21
 commands:
-  chatbridge:
-    description: Main command for ChatBridge plugin
-    usage: /<command> reconnect
-    aliases: [cb]
+  enderlink:
+    description: Main command for EnderLink plugin
+    usage: /<command>
+    aliases: [el]
