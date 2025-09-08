@@ -7,11 +7,16 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.server.ServerLoadEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.json.JSONObject;
+
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +25,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
@@ -142,8 +146,6 @@ public class EnderLink extends JavaPlugin implements Listener {
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder()
                 .buildAsync(URI.create(websocketUrl), new WebSocket.Listener() {
-                    private boolean registeredWs = false;
-
                     @Override
                     public void onOpen(WebSocket webSocket) {
                         getLogger().info("Connected to WebSocket relay as " + roomId);
@@ -181,7 +183,9 @@ public class EnderLink extends JavaPlugin implements Listener {
                         // Global alert every 5 minutes
                         Bukkit.getScheduler().runTaskTimer(EnderLink.this, () -> {
                             if (!wsConnected) {
-                                Bukkit.broadcastMessage(messagesConfig.getString("error-disconnect"));
+                                String errorMsg = messagesConfig.getString("error-disconnect");
+                                Component componentMsg = Component.text(errorMsg);
+                                Bukkit.getServer().broadcast(componentMsg);
                             }
                         }, 0L, 6000L);
 
@@ -238,16 +242,18 @@ public class EnderLink extends JavaPlugin implements Listener {
 
     // EVENT HANDLING
     @EventHandler
-    public void onChat(AsyncPlayerChatEvent event) {
+    public void onChat(AsyncChatEvent  event) {
+        String playerName = event.getPlayer().getName();
+        String message = PlainTextComponentSerializer.plainText().serialize(event.message());
+
         if (ws != null) {
-            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"chat\", \"sender\": \"minecraft\", \"player\": \"" + event.getPlayer().getName() + "\", \"message\": \"" + event.getMessage() + "\" }";
+            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"chat\", \"sender\": \"minecraft\", \"player\": \"" + playerName + "\", \"message\": \"" + message + "\" }";
             ws.sendText(json, true);
         }
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        getLogger().info("Join fired for " + event.getPlayer().getName());
         if (ws != null) {
             String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_join\", \"player\": \"" + event.getPlayer().getName() + "\" }";
             ws.sendText(json, true);
@@ -256,10 +262,42 @@ public class EnderLink extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        getLogger().info("Quit fired for " + event.getPlayer().getName());
         if (ws != null) {
             String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_quit\", \"player\": \"" + event.getPlayer().getName() + "\" }";
             ws.sendText(json, true);
+        }
+    }
+
+    @EventHandler
+    public void onDead(PlayerDeathEvent event) {
+        if (ws != null) {
+            String playerName = event.getPlayer().getName();
+
+            // deathMessage() returns a Component
+            Component deathMessage = event.deathMessage();
+
+            // Convert Component → plain String (no colors, just text)
+            String reason = deathMessage != null 
+                ? PlainTextComponentSerializer.plainText().serialize(deathMessage)
+                : "Unknown";
+
+            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_dead\", \"player\": \"" 
+                + playerName + "\", \"reason\": \"" + reason + "\" }";
+
+            ws.sendText(json, true);
+        }
+    }
+    
+    @EventHandler
+    public void onServerLoad(ServerLoadEvent event) {
+        if (event.getType() == ServerLoadEvent.LoadType.STARTUP && ws != null) {
+            String upJson = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"up\" }";
+            ws.sendText(upJson, true);
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                String downJson = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"down\" }";
+                ws.sendText(downJson, true);
+            }));
         }
     }
 
@@ -323,11 +361,12 @@ public class EnderLink extends JavaPlugin implements Listener {
             String player = json.optString("player", "Unknown");
             String message = json.optString("message", "");
             
-            message = messagesConfig.getString("mc-chat", "[{sender}] {player} > {message}")
+            String finalMessage = messagesConfig.getString("mc-chat", "[{sender}] {player} > {message}")
                 .replace("{sender}", sender)
                 .replace("{player}", player)
                 .replace("{message}", message);
-            Bukkit.broadcastMessage(message);   
+            Component componentMsg = Component.text(finalMessage);
+            Bukkit.getServer().broadcast(componentMsg);
         }
     }
 
@@ -338,12 +377,13 @@ public class EnderLink extends JavaPlugin implements Listener {
             String original = json.optString("original", "");
             String message = json.optString("message", "");
             
-            message = messagesConfig.getString("mc-reply", "[{sender}] {player} > {message} (in reply to {reply_to})")
+            String finalMessage = messagesConfig.getString("mc-reply", "[{sender}] {player} > {message} (in reply to {reply_to})")
                 .replace("{sender}", sender)
                 .replace("{player}", player)
                 .replace("{message}", message)
                 .replace("{reply_to}", original);
-            Bukkit.broadcastMessage(message);
+            Component componentMsg = Component.text(finalMessage);
+            Bukkit.getServer().broadcast(componentMsg);
         }
     }
 }

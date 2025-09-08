@@ -1,6 +1,6 @@
 name: EnderLink
 main: com.example.enderlink.EnderLink
-version: 0.1.1
+version: 0.3.0
 api-version: 1.21
 commands:
   enderlink:
