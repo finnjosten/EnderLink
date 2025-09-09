@@ -311,7 +311,7 @@ public class EnderLink extends JavaPlugin implements Listener {
 
 
 
-    
+
 
 
 
@@ -374,7 +374,7 @@ public class EnderLink extends JavaPlugin implements Listener {
             String message = json.optString("message", "");
             
             String finalMessage = messagesConfig.getString("mc-chat", "[{sender}] {player} > {message}")
-                .replace("{sender}", sender)
+                .replace("{sender}", sender.toUpperCase())
                 .replace("{player}", player)
                 .replace("{message}", message);
             Component componentMsg = Component.text(finalMessage);
@@ -390,7 +390,7 @@ public class EnderLink extends JavaPlugin implements Listener {
             String message = json.optString("message", "");
             
             String finalMessage = messagesConfig.getString("mc-reply", "[{sender}] {player} > {message} (in reply to {reply_to})")
-                .replace("{sender}", sender)
+                .replace("{sender}", sender.toUpperCase())
                 .replace("{player}", player)
                 .replace("{message}", message)
                 .replace("{reply_to}", original);
