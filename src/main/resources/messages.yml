@@ -5,6 +5,7 @@ settings-server-id: "§7[§dEnderLink§7] §fServer ID: {server_id}"
 settings-room-id: "§7[§dEnderLink§7] §fRoom ID: {room_id}"
 settings-status: "§7[§dEnderLink§7] §fStatus: {status}"
 settings-reconnect: "§7[§dEnderLink§7] §fTo reconnect, use: §d/enderlink reconnect"
+settings-unknown: "§7[§dEnderLink§7] §cUnknown subcommand. Use §d/enderlink help §cfor info."
 
 error-op-disconnect: "§7[§dEnderLink§7] §cEnderLink (Websocket) disconnected! Run §d/enderlink reconnect§c."
 error-disconnect: "§7[§dEnderLink§7] §cEnderLink has been disconnected! An auto reconnect will be attempted. If this persists, please contact an admin."

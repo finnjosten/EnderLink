@@ -5,19 +5,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.server.ServerLoadEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.json.JSONObject;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -58,7 +50,82 @@ public class EnderLink extends JavaPlugin implements Listener {
         ensureServerIdAsync();
         Bukkit.getPluginManager().registerEvents(this, this);
         connectWebSocket();
+
+        setupEvents();
+        setupCommands();
     }
+
+
+    private void setupEvents() {
+        Bukkit.getPluginManager().registerEvents(new Events(this, serverId, ws), this);
+    }
+
+    private void setupCommands() {
+        // Register the /enderlink command using Bukkit's system
+        if (getCommand("enderlink") != null) {
+            Commands commands = new Commands(this, serverId, ws);
+            getCommand("enderlink").setExecutor(commands);
+            getCommand("enderlink").setTabCompleter(commands);
+        } else {
+            this.sendWarning("/enderlink command not found in plugin.yml");
+        }
+    }
+
+
+
+
+
+
+
+
+    public boolean isWsConnected() {
+        return wsConnected;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public void sendInfo(String msg) {
+        getLogger().info(msg);
+    }
+
+    public void sendWarning(String msg) {
+        getLogger().warning(msg);
+    }
+
+    public void sendError(String msg) {
+        getLogger().severe(msg);
+    }
+
+    public FileConfiguration getMessagesConfig() {
+        return messagesConfig;
+    }
+
+    public net.kyori.adventure.text.Component component(String text) {
+        return net.kyori.adventure.text.Component.text(text);
+    }
+
+    public net.kyori.adventure.text.Component formatStatus() {
+        return component(messagesConfig.getString("settings-server-id").replace("{server_id}", serverId) + "\n"
+            + messagesConfig.getString("settings-room-id").replace("{room_id}", roomId) + "\n"
+            + messagesConfig.getString("settings-status").replace("{status}", (wsConnected ? "§aConnected" : "§cDisconnected")) + "\n"
+            + messagesConfig.getString("settings-reconnect"));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     private void ensureServerIdAsync() {
         if (serverId == null || serverId.equals("UUID") || serverId.isEmpty()) {
@@ -67,7 +134,7 @@ public class EnderLink extends JavaPlugin implements Listener {
             this.registered = true;
             getConfig().set("server-id", this.serverId);
             getConfig().set("room-id", this.roomId);
-            getLogger().info("Using existing server UUID: " + serverId);
+            this.sendInfo("Using existing server UUID: " + serverId);
             return;
         }
 
@@ -100,27 +167,27 @@ public class EnderLink extends JavaPlugin implements Listener {
 
                         if (registerResponse.statusCode() == 200 && registerResponse.body().contains("false")) {
                             this.registered = true;
-                            getLogger().info("Registered server UUID: " + serverId);
+                            this.sendInfo("Registered server UUID: " + serverId);
                             break;
                         } else {
-                            getLogger().severe("Failed to register server UUID: " + serverId + " Response: " + registerResponse.body());
+                            this.sendError("Failed to register server UUID: " + serverId + " Response: " + registerResponse.body());
                         }
                     } else {
-                        getLogger().warning("Server UUID is already registered: " + serverId);
+                        this.sendWarning("Server UUID is already registered: " + serverId);
                     }
 
                     if (!this.registered) {
                         serverId = UUID.randomUUID().toString();
                         count++;
-                        getLogger().info("Checking new server UUID: " + serverId);
+                        this.sendInfo("Checking new server UUID: " + serverId);
                     }
 
                     if (count >= 5) {
-                        getLogger().severe("Failed to register a unique server UUID after 5 attempts. Stopping.");
+                        this.sendError("Failed to register a unique server UUID after 5 attempts. Stopping.");
                         break;
                     }
                 } catch (Exception e) {
-                    getLogger().severe("Failed to check/register UUID: " + e.getMessage());
+                    this.sendError("Failed to check/register UUID: " + e.getMessage());
                     break;
                 }
             }
@@ -135,20 +202,20 @@ public class EnderLink extends JavaPlugin implements Listener {
                     try {
                         getConfig().save(new File(getDataFolder(), "config.yml"));
                     } catch (IOException e) {
-                        getLogger().severe("Failed to save config.yml with server-id!");
+                        this.sendError("Failed to save config.yml with server-id!");
                     }
                 }
             });
         });
     }
 
-    private void connectWebSocket() {
+    public void connectWebSocket() {
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder()
                 .buildAsync(URI.create(websocketUrl), new WebSocket.Listener() {
                     @Override
                     public void onOpen(WebSocket webSocket) {
-                        getLogger().info("Connected to WebSocket relay as " + roomId);
+                        sendInfo("Connected to WebSocket relay as " + roomId);
                         ws = webSocket;
 
                         // Send register message
@@ -166,7 +233,7 @@ public class EnderLink extends JavaPlugin implements Listener {
                             // Reconnect if no pong in 2 minutes
                             if (lastPongTime > 0 && (System.currentTimeMillis() - lastPongTime) > 120000) {
                                 wsConnected = false;
-                                getLogger().warning("WebSocket pong timeout, attempting to reconnect...");
+                                sendWarning("WebSocket pong timeout, attempting to reconnect...");
                                 try {
                                     if (ws != null) ws.sendClose(WebSocket.NORMAL_CLOSURE, "Pong timeout");
                                 } catch (Exception ignored) {}
@@ -204,7 +271,7 @@ public class EnderLink extends JavaPlugin implements Listener {
                                 wsConnected = true;
 
                                 if ("registered".equalsIgnoreCase(type)) {
-                                    getLogger().info("WebSocket registration successful for server: " + serverId);
+                                    sendInfo("WebSocket registration successful for server: " + serverId);
                                 } else if ("pong".equalsIgnoreCase(type)) {
                                 } else if ("chat".equalsIgnoreCase(type) || "message".equalsIgnoreCase(type)) {
                                     sendChat(json);
@@ -212,7 +279,7 @@ public class EnderLink extends JavaPlugin implements Listener {
                                     sendChatReply(json);
                                 }
                             } catch (Exception e) {
-                                getLogger().severe("Failed to process WebSocket message: " + e.getMessage());
+                                sendError("Failed to process WebSocket message: " + e.getMessage());
                             }
                         });
 
@@ -221,11 +288,11 @@ public class EnderLink extends JavaPlugin implements Listener {
 
                     @Override
                     public void onError(WebSocket webSocket, Throwable error) {
-                        getLogger().severe("WebSocket error: " + error.getMessage());
+                        sendError("WebSocket error: " + error.getMessage());
                         WebSocket.Listener.super.onError(webSocket, error);
                     }
                 }).exceptionally(e -> {
-                    getLogger().severe("Failed to connect to WebSocket relay: " + e.getMessage());
+                    sendError("Failed to connect to WebSocket relay: " + e.getMessage());
                     return null;
                 });
     }
@@ -240,66 +307,7 @@ public class EnderLink extends JavaPlugin implements Listener {
 
 
 
-    // EVENT HANDLING
-    @EventHandler
-    public void onChat(AsyncChatEvent  event) {
-        String playerName = event.getPlayer().getName();
-        String message = PlainTextComponentSerializer.plainText().serialize(event.message());
-
-        if (ws != null) {
-            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"chat\", \"sender\": \"minecraft\", \"player\": \"" + playerName + "\", \"message\": \"" + message + "\" }";
-            ws.sendText(json, true);
-        }
-    }
-
-    @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
-        if (ws != null) {
-            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_join\", \"player\": \"" + event.getPlayer().getName() + "\" }";
-            ws.sendText(json, true);
-        }
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
-        if (ws != null) {
-            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_quit\", \"player\": \"" + event.getPlayer().getName() + "\" }";
-            ws.sendText(json, true);
-        }
-    }
-
-    @EventHandler
-    public void onDead(PlayerDeathEvent event) {
-        if (ws != null) {
-            String playerName = event.getPlayer().getName();
-
-            // deathMessage() returns a Component
-            Component deathMessage = event.deathMessage();
-
-            // Convert Component → plain String (no colors, just text)
-            String reason = deathMessage != null 
-                ? PlainTextComponentSerializer.plainText().serialize(deathMessage)
-                : "Unknown";
-
-            String json = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_dead\", \"player\": \"" 
-                + playerName + "\", \"reason\": \"" + reason + "\" }";
-
-            ws.sendText(json, true);
-        }
-    }
     
-    @EventHandler
-    public void onServerLoad(ServerLoadEvent event) {
-        if (event.getType() == ServerLoadEvent.LoadType.STARTUP && ws != null) {
-            String upJson = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"up\" }";
-            ws.sendText(upJson, true);
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                String downJson = "{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"down\" }";
-                ws.sendText(downJson, true);
-            }));
-        }
-    }
 
 
 
