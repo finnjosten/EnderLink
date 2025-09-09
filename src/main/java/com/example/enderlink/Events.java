@@ -58,7 +58,7 @@ public class Events implements Listener {
     
     @EventHandler
     public void onServerLoad(ServerLoadEvent event) {
-        if (event.getType() == ServerLoadEvent.LoadType.STARTUP && this.ws != null) {
+        if (event.getType() == ServerLoadEvent.LoadType.STARTUP) {
             wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"up\" }");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
