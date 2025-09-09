@@ -57,7 +57,7 @@ public class EnderLink extends JavaPlugin implements Listener {
 
 
     private void setupEvents() {
-        Bukkit.getPluginManager().registerEvents(new Events(this, serverId, ws), this);
+        Bukkit.getPluginManager().registerEvents(new Events(this, serverId), this);
     }
 
     private void setupCommands() {
@@ -77,6 +77,10 @@ public class EnderLink extends JavaPlugin implements Listener {
 
 
 
+
+    public WebSocket getWs() {
+        return ws;
+    }
 
     public boolean isWsConnected() {
         return wsConnected;
