@@ -1,9 +1,16 @@
 name: EnderLink
 main: com.example.enderlink.EnderLink
-version: 0.4.3
+version: 0.4.4
 api-version: 1.21
 commands:
   enderlink:
     description: Main command for EnderLink plugin
     usage: /<command>
     aliases: [el]
+    permission: enderlink.use
+    permission-message: "You do not have permission to use this command"
+
+permissions:
+  enderlink.use:
+    description: "Allows use of the EnderLink command"
+    default: op
