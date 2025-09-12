@@ -303,7 +303,13 @@ public class EnderLink extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        if (ws != null) ws.sendClose(WebSocket.NORMAL_CLOSURE, "Shutting down");
+        if (Bukkit.isStopping() && ws != null) {
+            new Thread(() -> {
+                sendInfo("Server stopping, sending shutdown message...");
+                ws.sendText("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"down\" }", true);
+                ws.sendClose(WebSocket.NORMAL_CLOSURE, "Shutting down");
+            }).start();
+        }
     }
 
 

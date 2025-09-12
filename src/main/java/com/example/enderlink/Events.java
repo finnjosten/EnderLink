@@ -60,14 +60,8 @@ public class Events implements Listener {
     public void onServerLoad(ServerLoadEvent event) {
         if (event.getType() == ServerLoadEvent.LoadType.STARTUP) {
             wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"up\" }");
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                plugin.sendInfo("Shutdown event triggered");
-                wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"down\" }");
-            }));
         }
     }
-
 
     private void wsSend(String msg) {
         if (plugin.getWs() != null) {
