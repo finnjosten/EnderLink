@@ -1,4 +1,4 @@
-package com.example.enderlink;
+package nl.frjosten.enderlink;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -40,20 +40,15 @@ public class Commands implements CommandExecutor, TabCompleter {
         }
         switch (args[0].toLowerCase()) {
             case "reconnect":
-                if (ws != null) {
-                    try {
-                        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Reconnecting");
-                    } catch (Exception ignored) {}
-                }
-                plugin.connectWebSocket();
+                plugin.getWebsocketClass().reconnect();
                 sender.sendMessage("§a[EnderLink] Attempting to reconnect to WebSocket...");
                 return true;
             case "id":
                 sender.sendMessage(plugin.getMessagesConfig().getString("settings-server-id").replace("{server_id}", serverId));
-                sender.sendMessage(plugin.getMessagesConfig().getString("settings-room-id").replace("{room_id}", plugin.getRoomId()));
+                sender.sendMessage(plugin.getMessagesConfig().getString("settings-room-id").replace("{room_id}", plugin.roomId));
                 return true;
             case "status":
-                sender.sendMessage(plugin.getMessagesConfig().getString("settings-status").replace("{status}", (plugin.isWsConnected() ? "§aConnected" : "§cDisconnected")));
+                sender.sendMessage(plugin.getMessagesConfig().getString("settings-status").replace("{status}", (plugin.getWebsocketClass().connected() ? "§aConnected" : "§cDisconnected")));
                 return true;
             case "help":
                 sender.sendMessage("§7[§dEnderLink§7] §fAvailable commands:");

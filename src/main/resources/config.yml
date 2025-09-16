@@ -3,6 +3,9 @@ server-id: UUID
 
 # Websocket URL, Dont change if you dont know what you are doing!
 websocket-url: "ws://james.vacso.cloud:10000"
+
+# The room ID, this is often the same as the server ID but can be changed.
+# If change you will need to update this in the bot config as well!
 room-id: UUID
 
 # API Endpoint URL, Dont change if you dont know what you are doing!
