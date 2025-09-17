@@ -13,6 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
+import java.util.List;
 import java.util.UUID;
 
 public class EnderLink extends JavaPlugin implements Listener {
@@ -22,8 +23,10 @@ public class EnderLink extends JavaPlugin implements Listener {
     public String apiUrl;
     public String roomId;
     private boolean registered;
+    private List<String> events;
 
     private FileConfiguration messagesConfig;
+    private FileConfiguration config;
 
     private Events eventsClass;
     private Commands commandsClass;
@@ -34,16 +37,18 @@ public class EnderLink extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         saveDefaultMessagesConfig();
+        
+        this.config = getConfig();
         reloadConfig();
 
         // Load in messages.yml
         messagesConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
 
-        FileConfiguration config = getConfig();
         websocketUrl = config.getString("websocket-url", "ws://james.vacso.cloud:10000");
         apiUrl = config.getString("api-url", "https://api.james.vacso.cloud");
         serverId = config.getString("server-id", "UUID");
         roomId = config.getString("room-id", serverId);
+        events = config.getStringList("events");
 
         ensureServerIdAsync();
         webSocketClass = new WS(this);
@@ -55,7 +60,7 @@ public class EnderLink extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        if (Bukkit.isStopping()) {
+        if (Bukkit.isStopping() && events.contains("server-stop")) {
             new Thread(() -> {
                 webSocketClass.msg("{ \\\"serverId\\\": \\\"\" + serverId + \"\\\", \\\"type\\\": \\\"mc_power\\\", \\\"event\\\": \\\"down\\\" }");
                 webSocketClass.disconnect("Shutting down");
@@ -77,7 +82,7 @@ public class EnderLink extends JavaPlugin implements Listener {
     private void setupCommands() {
         // Register the /enderlink command using Bukkit's system
         if (getCommand("enderlink") != null) {
-            commandsClass = new Commands(this, serverId, ws);
+            commandsClass = new Commands(this);
             getCommand("enderlink").setExecutor(commandsClass);
             getCommand("enderlink").setTabCompleter(commandsClass);
         } else {
@@ -108,6 +113,15 @@ public class EnderLink extends JavaPlugin implements Listener {
     public FileConfiguration getMessagesConfig() {
         return messagesConfig;
     }
+    public FileConfiguration getConfig() {
+        return config;
+    }
+    public String getServerId() {
+        return serverId;
+    }
+    public String getRoomId() {
+        return roomId;
+    }
 
 
     public void scheduleTask(long delay, long period, Runnable task) {
@@ -120,6 +134,17 @@ public class EnderLink extends JavaPlugin implements Listener {
 
     public net.kyori.adventure.text.Component component(String text) {
         return net.kyori.adventure.text.Component.text(text);
+    }
+
+
+    public void reloadConfig() {
+        super.reloadConfig();
+        config = getConfig();
+        websocketUrl = config.getString("websocket-url", "ws://james.vacso.cloud:10000");
+        apiUrl = config.getString("api-url", "https://api.james.vacso.cloud");
+        serverId = config.getString("server-id", "UUID");
+        roomId = config.getString("room-id", serverId);
+        events = config.getStringList("events");
     }
 
 

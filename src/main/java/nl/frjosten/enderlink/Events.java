@@ -13,6 +13,7 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import java.net.http.WebSocket;
+import java.util.List;
 
 public class Events implements Listener {
     private final EnderLink plugin;
@@ -34,6 +35,7 @@ public class Events implements Listener {
     // Event handling
     @EventHandler
     public void onChat(AsyncChatEvent  event) {
+        if (!checkEvent("chat")) return;
         String playerName = event.getPlayer().getName();
         String message = PlainTextComponentSerializer.plainText().serialize(event.message());
 
@@ -42,16 +44,19 @@ public class Events implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        if (!checkEvent("join")) return;
         wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_join\", \"player\": \"" + event.getPlayer().getName() + "\" }");
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        if (!checkEvent("leave")) return;
         wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_quit\", \"player\": \"" + event.getPlayer().getName() + "\" }");
     }
 
     @EventHandler
     public void onDead(PlayerDeathEvent event) {
+        if (!checkEvent("death")) return;
         String playerName = event.getPlayer().getName();
 
         // deathMessage() returns a Component
@@ -67,6 +72,7 @@ public class Events implements Listener {
     
     @EventHandler
     public void onServerLoad(ServerLoadEvent event) {
+        if (!checkEvent("server-start")) return;
         if (event.getType() == ServerLoadEvent.LoadType.STARTUP) {
             wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"up\" }");
         }
@@ -108,6 +114,17 @@ public class Events implements Listener {
             Component componentMsg = Component.text(finalMessage);
             Bukkit.getServer().broadcast(componentMsg);
         }
+    }
+
+
+
+
+
+
+    // Helper functions
+    private boolean checkEvent(String type) {
+        List<String> events = plugin.getConfig().getStringList("events");
+        return events.contains(type);
     }
 
 
