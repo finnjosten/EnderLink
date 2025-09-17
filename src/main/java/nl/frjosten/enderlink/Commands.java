@@ -54,7 +54,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§d/enderlink help §7- §fShow this help message.");
                 return true;
             case "reload":
-                plugin.reloadConfig();
+                plugin.commandReloadConfig();
                 plugin.getWebsocketClass().reconnect();
                 sender.sendMessage("§a[EnderLink] Configuration reloaded and attempting to reconnect to WebSocket...");
                 return true;

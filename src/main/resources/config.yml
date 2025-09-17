@@ -11,12 +11,14 @@ room-id: UUID
 # API Endpoint URL, Dont change if you dont know what you are doing!
 api-url: "https://api.james.vacso.cloud"
 
-# MC Events to listen to, you can disable any of these if you want.
+# MC Events to listen to, you can disable any event by remove it
+# Possible events:
+# chat, join, leave, death, advancement, server-start, server-stop
 events:
-  chat: true
-  join: true
-  leave: true
-  death: true
-  advancement: true
-  server-start: true
-  server-stop: true
+  - chat
+  - join
+  - leave
+  - death
+  - advancement
+  - server-start
+  - server-stop

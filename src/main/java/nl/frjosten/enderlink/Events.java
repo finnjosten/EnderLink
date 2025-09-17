@@ -123,7 +123,7 @@ public class Events implements Listener {
 
     // Helper functions
     private boolean checkEvent(String type) {
-        List<String> events = plugin.getConfig().getStringList("events");
+        List<String> events = plugin.getGeneralConfig().getStringList("events");
         return events.contains(type);
     }
 

@@ -12,12 +12,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.http.WebSocket;
 import java.util.List;
 import java.util.UUID;
 
 public class EnderLink extends JavaPlugin implements Listener {
-    private WebSocket ws;
     public String serverId;
     public String websocketUrl;
     public String apiUrl;
@@ -37,18 +35,17 @@ public class EnderLink extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         saveDefaultMessagesConfig();
+        super.reloadConfig();
         
-        this.config = getConfig();
-        reloadConfig();
-
         // Load in messages.yml
         messagesConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
-
-        websocketUrl = config.getString("websocket-url", "ws://james.vacso.cloud:10000");
-        apiUrl = config.getString("api-url", "https://api.james.vacso.cloud");
-        serverId = config.getString("server-id", "UUID");
-        roomId = config.getString("room-id", serverId);
-        events = config.getStringList("events");
+        
+        this.config = getConfig();
+        websocketUrl    = this.config.getString("websocket-url", "ws://james.vacso.cloud:10000");
+        apiUrl          = this.config.getString("api-url", "https://api.james.vacso.cloud");
+        serverId        = this.config.getString("server-id", "UUID");
+        roomId          = this.config.getString("room-id", serverId);
+        events          = this.config.getStringList("events");
 
         ensureServerIdAsync();
         webSocketClass = new WS(this);
@@ -113,7 +110,7 @@ public class EnderLink extends JavaPlugin implements Listener {
     public FileConfiguration getMessagesConfig() {
         return messagesConfig;
     }
-    public FileConfiguration getConfig() {
+    public FileConfiguration getGeneralConfig() {
         return config;
     }
     public String getServerId() {
@@ -137,14 +134,16 @@ public class EnderLink extends JavaPlugin implements Listener {
     }
 
 
-    public void reloadConfig() {
+    public void commandReloadConfig() {
         super.reloadConfig();
+        
         config = getConfig();
-        websocketUrl = config.getString("websocket-url", "ws://james.vacso.cloud:10000");
-        apiUrl = config.getString("api-url", "https://api.james.vacso.cloud");
-        serverId = config.getString("server-id", "UUID");
-        roomId = config.getString("room-id", serverId);
-        events = config.getStringList("events");
+
+        websocketUrl    = this.config.getString("websocket-url", "ws://james.vacso.cloud:10000");
+        apiUrl          = this.config.getString("api-url", "https://api.james.vacso.cloud");
+        serverId        = this.config.getString("server-id", "UUID");
+        roomId          = this.config.getString("room-id", serverId);
+        events          = this.config.getStringList("events");
     }
 
 
