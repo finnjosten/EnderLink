@@ -20,6 +20,7 @@ public class EnderLink extends JavaPlugin implements Listener {
     public String websocketUrl;
     public String apiUrl;
     public String roomId;
+    public String roomSecret;
     private boolean registered;
     private List<String> events;
 
@@ -45,9 +46,12 @@ public class EnderLink extends JavaPlugin implements Listener {
         apiUrl          = this.config.getString("api-url", "https://api.james.vacso.cloud");
         serverId        = this.config.getString("server-id", "UUID");
         roomId          = this.config.getString("room-id", serverId);
+        roomSecret      = this.config.getString("room-secret", "SECRET");
         events          = this.config.getStringList("events");
 
-        ensureServerIdAsync();
+        ensureUUID();
+        ensureRoom();
+
         webSocketClass = new WS(this);
         webSocketClass.connect();
 
@@ -152,13 +156,12 @@ public class EnderLink extends JavaPlugin implements Listener {
 
     
     // UUID Handling
-    private void ensureServerIdAsync() {
+    private void ensureUUID() {
         if (serverId == null || serverId.equals("UUID") || serverId.isEmpty()) {
             serverId = UUID.randomUUID().toString();
         } else {
             this.registered = true;
             getConfig().set("server-id", this.serverId);
-            getConfig().set("room-id", this.roomId);
             logger.info("Using existing server UUID: " + serverId);
             return;
         }
@@ -232,6 +235,19 @@ public class EnderLink extends JavaPlugin implements Listener {
                 }
             });
         });
+    }
+
+    private void ensureRoom() {
+        if (roomId == null || roomId.isEmpty() || roomId.equals("UUID")) {
+            roomId = serverId;
+            getConfig().set("room-id", roomId);
+        }
+        if (roomSecret == null || roomSecret.isEmpty() || roomSecret.equals("SECRET")) {
+            String newSecret = UUID.randomUUID().toString().replace("-", "");
+            roomSecret = newSecret;
+            getConfig().set("room-secret", roomSecret);
+            logger.info("Generated new room secret.");
+        }
     }
 
 

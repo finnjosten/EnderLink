@@ -54,7 +54,7 @@ public class WS {
                 ws = webSocket;
 
                 // Send register message
-                msg("{\"type\":\"register\",\"roomId\":\"" + roomId + "\"}");
+                msg("{\"type\":\"register\",\"roomId\":\"" + roomId + "\",\"roomSecret\":\"" + plugin.roomSecret + "\",\"is\":\"mc_server\"}");
                 connected = true;
 
                 // Ping every minute

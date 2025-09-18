@@ -1,15 +1,40 @@
-# Server ID, you can generate a new one if you want to reset the link between your Minecraft server and the discord bot.
+## General Configuration ##
+
+# Just a simple UUID to identify your server, to reset it just set the line to "UUID" and restart the server
 server-id: UUID
 
-# Websocket URL, Dont change if you dont know what you are doing!
-websocket-url: "ws://james.vacso.cloud:10000"
-
-# The room ID, this is often the same as the server ID but can be changed.
-# If change you will need to update this in the bot config as well!
-room-id: UUID
 
 # API Endpoint URL, Dont change if you dont know what you are doing!
+# This is used to register the server UUID's to make sure every server has an unique UUID
 api-url: "https://api.james.vacso.cloud"
+
+
+
+
+
+## Websocket Configuration ##
+
+# Websocket URL, Dont change if you dont know what you are doing!
+# This is the URL to the websocket server, if you want to host your own you can find the code here: https://github.com/finnjosten/EnderLinkWebsocket
+websocket-url: "ws://james.vacso.cloud:10000"
+
+# Room ID and Room Secret.
+#
+# Room ID is used to make sure your bot and server are in the same room and can communicate.
+# Using this you can put multiple servers and or bots in the same room and have them communicate with each other.
+# Minecraft only read messages not from minecraft, and discord only not from discord (so minecraft to minecraft is not possible)
+#
+# Room Secret is used to make sure only you or anyone you share it with can join the room. Keep it secret!!!
+# 
+# Make sure that your discord bot config has the correct ID and SECRET!!
+room-id: UUID
+room-secret: SECRET
+
+
+
+
+
+## Minecraft Configuration ##
 
 # MC Events to listen to, you can disable any event by remove it
 # Possible events:
