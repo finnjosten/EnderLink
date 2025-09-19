@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.UUID;
 
 public class EnderLink extends JavaPlugin implements Listener {
+    private final int lastestConfigVersion = 1;
+    private final int lastestMessagesVersion = 2;
+
     public String serverId;
     public String websocketUrl;
     public String apiUrl;
@@ -42,6 +45,16 @@ public class EnderLink extends JavaPlugin implements Listener {
         messagesConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
         
         this.config = getConfig();
+        int configVersion   = this.config.getInt("version", 0);
+        int messageVersion  = this.messagesConfig.getInt("version", 0);
+
+        if (configVersion < lastestConfigVersion) {
+            logger.warning("Your config.yml is outdated (current " + configVersion + ", new " + lastestConfigVersion + "). Please back it up and delete it, then restart the server or reload plugin to generate a new one.");
+        }
+        if (messageVersion < lastestMessagesVersion) {
+            logger.warning("Your messages.yml is outdated (current " + messageVersion + ", new " + lastestMessagesVersion + "). Please back it up and delete it, then restart the server or reload the plugin to generate a new one.");
+        }
+
         websocketUrl    = this.config.getString("websocket-url", "ws://james.vacso.cloud:10000");
         apiUrl          = this.config.getString("api-url", "https://api.james.vacso.cloud");
         serverId        = this.config.getString("server-id", "UUID");

@@ -46,6 +46,8 @@ public class WS {
 
         messagesConfig  = plugin.getMessagesConfig();
 
+        logger.info("Connecting to WebSocket relay at " + websocketUrl + " (roomId: " + roomId + ", serverId: " + serverId + ")");
+
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder().buildAsync(URI.create(websocketUrl), new WebSocket.Listener() {
             @Override
@@ -82,6 +84,7 @@ public class WS {
             }
         }).exceptionally(e -> {
             logger.error("Failed to connect to WebSocket relay: " + e.getMessage());
+            logger.error("Connection info: " + websocketUrl + " (roomId: " + roomId + ", serverId: " + serverId + ")");
             return null;
         });
     }

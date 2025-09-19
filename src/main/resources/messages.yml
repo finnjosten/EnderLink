@@ -1,10 +1,14 @@
+version: 2 #DO NOT TOUCH
+
 mc-chat: "§7[§d{sender}§7] §7{player} > §f{message}"
 mc-reply: "§7[§d{sender}§7] §7{player} > §f{message} §7(in reply to §f{reply_to}§7)"
 
+settings-empty: "§7[§dEnderLink§7] §fEnderLink plugin is active. Use §d/enderlink help§f for commands."
 settings-server-id: "§7[§dEnderLink§7] §fServer ID: {server_id}"
 settings-room-id: "§7[§dEnderLink§7] §fRoom ID: {room_id}"
 settings-status: "§7[§dEnderLink§7] §fStatus: {status}"
-settings-reconnect: "§7[§dEnderLink§7] §fTo reconnect, use: §d/enderlink reconnect"
+settings-reconnect: "§7[§dEnderLink§7] §fAttempting to reconnect to WebSocket..."
+settings-reload: "§7[§dEnderLink§7] §fConfiguration reloaded and attempting to reconnect to WebSocket..."
 settings-unknown: "§7[§dEnderLink§7] §cUnknown subcommand. Use §d/enderlink help §cfor info."
 
 # Message to OP's on WS disconnect

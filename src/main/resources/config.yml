@@ -1,4 +1,5 @@
 ## General Configuration ##
+version: 1 #DO NOT TOUCH
 
 # Just a simple UUID to identify your server, to reset it just set the line to "UUID" and restart the server
 server-id: UUID
