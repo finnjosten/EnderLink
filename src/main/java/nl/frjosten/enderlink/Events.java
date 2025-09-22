@@ -12,7 +12,6 @@ import org.bukkit.event.Listener;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import java.net.http.WebSocket;
 import java.util.List;
 
 public class Events implements Listener {

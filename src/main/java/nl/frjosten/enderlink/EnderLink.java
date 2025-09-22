@@ -76,7 +76,7 @@ public class EnderLink extends JavaPlugin implements Listener {
     public void onDisable() {
         if (Bukkit.isStopping() && events.contains("server-stop")) {
             new Thread(() -> {
-                webSocketClass.msg("{ \\\"serverId\\\": \\\"\" + serverId + \"\\\", \\\"type\\\": \\\"mc_power\\\", \\\"event\\\": \\\"down\\\" }");
+                webSocketClass.msg("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_power\", \"event\": \"down\" }");
                 webSocketClass.disconnect("Shutting down");
             }).start();
         }
