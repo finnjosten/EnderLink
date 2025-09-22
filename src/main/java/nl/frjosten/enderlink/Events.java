@@ -1,15 +1,17 @@
 package nl.frjosten.enderlink;
 
 import org.bukkit.Bukkit;
+import org.bukkit.advancement.AdvancementDisplay;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.json.JSONObject;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.event.Listener;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import java.util.List;
@@ -67,6 +69,21 @@ public class Events implements Listener {
             : "Unknown";
 
         wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_dead\", \"player\": \"" + playerName + "\", \"reason\": \"" + reason + "\" }");
+    }
+
+    @EventHandler
+    public void onAdvancement(PlayerAdvancementDoneEvent event) {
+        if (!checkEvent("advancement")) return;
+
+        String playerName = event.getPlayer().getName();
+        String advancementKey = event.getAdvancement().getKey().toString();
+        
+        // Use inline import to avoid name clash
+        io.papermc.paper.advancement.AdvancementDisplay display = event.getAdvancement().getDisplay();
+        String title = (display != null ? PlainTextComponentSerializer.plainText().serialize(display.title()) : advancementKey);
+        String description = (display != null ? PlainTextComponentSerializer.plainText().serialize(display.description()) : "");
+
+        wsSend("{ \"serverId\": \"" + serverId + "\", \"type\": \"mc_advancement\", \"player\": \"" + playerName + "\", \"advancement\": \"" + advancementKey + "\", \"title\": \"" + title + "\", \"description\": \"" + description + "\" }");
     }
     
     @EventHandler
