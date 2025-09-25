@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bstats.bukkit.Metrics;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class EnderLink extends JavaPlugin implements Listener {
     public String roomSecret;
     private boolean registered;
     private List<String> events;
+    private int pluginID = 27357; // For bStats
 
     private FileConfiguration messagesConfig;
     private FileConfiguration config;
@@ -61,6 +63,8 @@ public class EnderLink extends JavaPlugin implements Listener {
         roomId          = this.config.getString("room-id", serverId);
         roomSecret      = this.config.getString("room-secret", "SECRET");
         events          = this.config.getStringList("events");
+
+        Metrics metrics = new Metrics(this, pluginID); // Start metrics for bstats
 
         ensureUUID();
         ensureRoom();
