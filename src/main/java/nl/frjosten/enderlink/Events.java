@@ -102,10 +102,15 @@ public class Events implements Listener {
     // Chat handling
     private void sendChat(JSONObject json) {
         String sender = json.optString("sender", "");
-        if (!"minecraft".equalsIgnoreCase(sender)) {
+        String serverId = json.optString("serverId", "");
+
+        // Check if the message is from the same server, if so void it other wise broadcast
+        if (!"minecraft".equalsIgnoreCase(sender) && !this.serverId.equalsIgnoreCase(serverId)) {
+            // Get all the variables
             String player = json.optString("player", "Unknown");
             String message = json.optString("message", "");
             
+            // Setup the message
             String finalMessage = plugin.getMessagesConfig().getString("mc-chat", "[{sender}] {player} > {message}")
                 .replace("{sender}", sender.toUpperCase())
                 .replace("{player}", player)
@@ -117,11 +122,16 @@ public class Events implements Listener {
 
     private void sendChatReply(JSONObject json) {
         String sender = json.optString("sender", "");
-        if (!"minecraft".equalsIgnoreCase(sender)) {
+        String serverId = json.optString("serverId", "");
+
+        // Check if the message is from the same server, if so void it other wise broadcast
+        if (!"minecraft".equalsIgnoreCase(sender) && !this.serverId.equalsIgnoreCase(serverId)) {
+            // Get all the variables
             String player = json.optString("player", "Unknown");
             String original = json.optString("original", "");
             String message = json.optString("message", "");
             
+            // Setup the message
             String finalMessage = plugin.getMessagesConfig().getString("mc-reply", "[{sender}] {player} > {message} (in reply to {reply_to})")
                 .replace("{sender}", sender.toUpperCase())
                 .replace("{player}", player)
@@ -159,6 +169,7 @@ public class Events implements Listener {
                 if ("registered".equalsIgnoreCase(type)) {
                     logger.info("WebSocket registration successful for server: " + serverId);
                 } else if ("pong".equalsIgnoreCase(type)) {
+                    // Void the pong
                 } else if ("chat".equalsIgnoreCase(type) || "message".equalsIgnoreCase(type)) {
                     sendChat(json);
                 } else if ("chat_reply".equalsIgnoreCase(type) || "message".equalsIgnoreCase(type)) {
