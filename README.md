@@ -80,6 +80,45 @@ You’ll need:
 
 ---
 
+## 🛠️ Optional configuration
+
+### Custom room ID and Secret
+In the plugins `config.yml` you can set the room id and room secret to what ever you want.
+```YAML
+room-id: UUID
+room-secret: SECRET
+```  
+Here you can set the ID to something you would like, we suggest you keep this as random as possible and keep the length at or under 32 characters.  
+Besides the ID you can also set your own Secret or better called Password. This again we suggest keeping as random as possible and at or under 32 characters.  
+  
+Why do we suggest random characters? Any one who works with some kind of security already knows that the more random something is the harder to guess it is. If you choose your password to be `password123` you can guranteed it will be guessed. Besides it being more secure its not like a password you need to remember. You copy it once and just paste it into the bots that need it. After that there is no reason to remember this secret.
+  
+  
+### Enabling / Disabling MC events
+Again in the plugins `config.yml` you can set what Minecraft events the plugin should be listening to.
+```YAML
+events:
+  - chat
+  - join
+  - leave
+  - death
+  - advancement
+  - server-start
+  - server-stop
+```
+In this list you can just set the events to listen to. The options are as follows:  
+- `chat`: All types of chat messages in minecraft.  
+- `join`: Joining of a player.  
+- `leave`: Leaving of a player.  
+- `death`: A player dying for some reason.  
+- `advancement`: A player getting an achievement (or now called advancements in MC).  
+- `server-start`: Once the server is started up it will send out this event.  
+- `server-stop`: Once the server is stopped it will send out this event.
+
+Both power events (`server-start/stop`) should in only be send out if the server actually starts and stop and not on plugin load / unload but errors could occur.
+
+---
+
 ## 🎉 Done!
 That’s it. You now have seamless **Minecraft ↔ Discord** chat integration with EnderLink.  
 Go ahead, send a message and watch the magic happen!
